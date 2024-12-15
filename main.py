@@ -1,16 +1,24 @@
-# This is a sample Python script.
+import aiogram
+import config
+import asyncio
+from aiogram import Bot, Dispatcher, types, executor
+from aiogram.types import Message
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+bot = Bot(token=config.BOT_TOKEN)
+dp = Dispatcher(bot)
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+@dp.message_handler(commands=["start"])
+async def echo_handler(message: Message):
+    await message.reply(f"Salom {message.from_user.first_name}")
 
 
-# Press the green button in the gutter to run the script.
+
+
+
+
+
+# Botni ishga tushirish
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    executor.start_polling(dp, skip_updates=True)
+    print("Bot ishga tushdi")
