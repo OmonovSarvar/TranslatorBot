@@ -1,32 +1,24 @@
-import aiogram
-import requests
-import config
-import asyncio
+import http.client
+import json
 from aiogram import Bot, Dispatcher, types, executor
-from aiogram.types import Message
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+import config
 
 # Botni yaratamiz
 bot = Bot(token=config.BOT_TOKEN)
 dp = Dispatcher(bot)
+
 # Apining url manzili
-url = "https://google-translate1.p.rapidapi.com/language/translate/v2"
+url = "deep-translate1.p.rapidapi.com"
+path = "/language/translate/v2"
 
+# API key
+RAPIDAPI_KEY = config.RAPIDAPI_KEY
 
-# 
-#@dp.message_handler(commands=["start"])  # Start command
-#async def echo_handler(message: Message):
-#    first_name = message.from_user.first_name  # Get user's 
-#    await message.reply(f"Assalomu Alekum {first_name}")
-
-
-
-@dp.message_handler(commands=['start', 'translate'])
+@dp.message_handler(commands=['start', 'translate'])    
 async def send_translation_menu(message: Message):
     keyboard = get_translation_buttons()
     await message.reply("Qaysi tarjimani tanlaysiz?", reply_markup=keyboard)
-
 
 def get_translation_buttons():
     # Tugmalarni yaratamiz
@@ -38,31 +30,45 @@ def get_translation_buttons():
     keyboard.add(uz_to_en, en_to_uz)
     return keyboard
 
-
 @dp.message_handler()
-def get_text_from_user(message: Message):
+async def get_text_from_user(message: Message):
     user_text = message.text
-    print(user_text)
 
+    payload = {
+        "q": f"{user_text}",
+        "target": "en",  # Qaysi tilga tarjima qilish
+        "source": "uz"   # Qaysi tildan tarjima qilish
+    }
 
-payload = {
-	"q": "Salom, dunyo!",
-	"target": "en",
-	"source": "uz"
-}
-headers = {
-	"x-rapidapi-key": "707c9a7aeemsh5ffec9ad5b7ac26p1582a5jsn2dd2b6a6b87b",
-	"x-rapidapi-host": "google-translate1.p.rapidapi.com",
-	"Content-Type": "application/x-www-form-urlencoded",
-	"Accept-Encoding": "application/gzip"
-}
+    headers = {
+        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-host": "deep-translate1.p.rapidapi.com",
+        "Content-Type": "application/json"
+    }
 
-response = requests.post(url, data=payload, headers=headers)
+    # http.client bilan so'rov yuborish
+    try:
+        conn = http.client.HTTPSConnection(url)
+        conn.request("POST", path, json.dumps(payload), headers)
 
-print(response.json())
+        res = conn.getresponse()
+        data = res.read().decode("utf-8")
+        result = json.loads(data)
+
+        # API javobini tekshirish
+        if 'data' in result and 'translations' in result['data']:
+            translated_text = result['data']['translations'][0]['translatedText']
+            await message.reply(translated_text)
+        else:
+            await message.reply("Xatolik yuz berdi yoki tarjima topilmadi. Iltimos, keyinroq urinib ko'ring.")
+
+    except Exception as e:
+        print(f"Xatolik yuz berdi: {e}")
+        await message.reply("Xatolik yuz berdi. Iltimos, keyinroq urinib ko'ring.")
 
 
 # Botni ishga tushirish
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
     print("Bot ishga tushdi")
+    executor.start_polling(dp, skip_updates=True)
+    print("Bot to'xtatildi")
