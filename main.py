@@ -3,6 +3,7 @@ import json
 from aiogram import Bot, Dispatcher, types, executor
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 import config
+import json
 
 # Botni yaratamiz
 bot = Bot(token=config.BOT_TOKEN)
@@ -14,6 +15,9 @@ path = "/language/translate/v2"
 
 # API key
 RAPIDAPI_KEY = config.RAPIDAPI_KEY
+
+# Result nomli dict yaratamiz
+answer = {}
 
 @dp.message_handler(commands=['start', 'translate'])    
 async def send_translation_menu(message: Message):
@@ -47,24 +51,23 @@ async def get_text_from_user(message: Message):
     }
 
     # http.client bilan so'rov yuborish
+    conn = http.client.HTTPSConnection(url)
+    conn.request("POST", path, json.dumps(payload), headers)
+    res = conn.getresponse()
+    data = res.read().decode("utf-8")
+
+    # JSON'ni dict formatiga o‘zgartirish
     try:
-        conn = http.client.HTTPSConnection(url)
-        conn.request("POST", path, json.dumps(payload), headers)
-
-        res = conn.getresponse()
-        data = res.read().decode("utf-8")
-        result = json.loads(data)
-
-        # API javobini tekshirish
-        if 'data' in result and 'translations' in result['data']:
-            translated_text = result['data']['translations'][0]['translatedText']
-            await message.reply(translated_text)
-        else:
-            await message.reply("Xatolik yuz berdi yoki tarjima topilmadi. Iltimos, keyinroq urinib ko'ring.")
-
-    except Exception as e:
-        print(f"Xatolik yuz berdi: {e}")
-        await message.reply("Xatolik yuz berdi. Iltimos, keyinroq urinib ko'ring.")
+        answer = json.loads(data)
+        print(type(answer))
+        print(answer)
+        # translatedText ni olish
+        translated_text = answer['data']['translations']['translatedText']
+        await message.answer(translated_text)
+    except json.JSONDecodeError:
+        print("Error decoding JSON. Response might not be valid.")
+    except KeyError as e:
+        print(f"KeyError: {e} - Response structure might be different.")
 
 
 # Botni ishga tushirish
